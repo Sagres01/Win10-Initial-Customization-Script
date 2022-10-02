@@ -243,6 +243,29 @@ function Install-WinSCP
 
 }
 
+# Silently install Git and choose not to restart after, confirm installation by printing the exit code to the screen (True = success) or the error message if issues occur, and remove the installer we dropped into our local TEMP directory
+function Install-Git
+{
+    $LocalTempDir = $env:TEMP; 
+    $GitInstaller = "GitInstaller.exe"; 
+    $url='https://github.com/git-for-windows/git/releases/download/v2.37.3.windows.1/Git-2.37.3-64-bit.exe'; 
+    $output="$LocalTempDir\$GitInstaller"
+
+    try {
+        (new-object System.Net.WebClient).DownloadFile($url, $output); 
+        $p = Start-Process $output -ArgumentList "/VERYSILENT /NORESTART" -PassThru -Verb runas; 
+
+        while (!$p.HasExited) { Start-Sleep -Seconds 1 }
+
+        Write-Output ([PSCustomObject]@{Success=$p.ExitCode -eq 0;Process=$p})
+    } catch {
+        Write-Output ([PSCustomObject]@{Success=$false;Process=$p;ErrorMessage=$_.Exception.Message;ErrorRecord=$_})
+    } finally {
+        Remove-Item "$LocalTempDir\$GitInstaller" -ErrorAction SilentlyContinue -Verbose
+    }
+
+}
+
 # Remove some of the Windows bloatware. This is just a small list of possible items. Feel free to add in any items that you think will appear on your machine
 function Remove-Bloatware
 { 
@@ -310,6 +333,7 @@ function Harden-ExecutionPolicy
 # Install-7Zip
 # Install-Putty
 # Install-WinSCP
+# Install-Git
 # Remove-Bloatware
 # ShowHiddenFiles
 # HideHiddenFiles
