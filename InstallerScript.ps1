@@ -128,6 +128,28 @@ function Install-Discord
 
 }
 
+# Silently install the latest Steam, confirm installation by printing exit code to the screen (True = success) or the error message if issues occur, and remove the installer we dropped into our local TEMP directory
+function Install-Steam
+{
+    $LocalTempDir = $env:TEMP; 
+    $SteamInstaller = "SteamInstaller.exe"; 
+    $url='https://cdn.fastly.steamstatic.com/client/installer/SteamSetup.exe'; 
+    $output="$LocalTempDir\$SteamInstaller"
+
+    try {
+        (new-object System.Net.WebClient).DownloadFile($url, $output); 
+        $p = Start-Process $output -ArgumentList "/silent","/install" -PassThru -Verb runas; 
+
+        while (!$p.HasExited) { Start-Sleep -Seconds 1 }
+
+        Write-Output ([PSCustomObject]@{Success=$p.ExitCode -eq 0;Process=$p})
+    } catch {
+        Write-Output ([PSCustomObject]@{Success=$false;Process=$p;ErrorMessage=$_.Exception.Message;ErrorRecord=$_})
+    } finally {
+        Remove-Item "$LocalTempDir\$ChromeInstaller" -ErrorAction SilentlyContinue -Verbose
+    }
+}
+
 # Silently install Obsidian, confirm installation by printing the exit code to the screen (True = success) or the error message if issues occur, and remove the installer we dropped into our local TEMP directory
 function Install-Obsidian
 {
@@ -328,6 +350,7 @@ function Harden-ExecutionPolicy
 # Install-Brave
 # Install-VSCode
 # Install-Discord
+# Install-Steam
 # Install-Obsidian
 # Install-Bitwarden
 # Install-7Zip
@@ -339,3 +362,4 @@ function Harden-ExecutionPolicy
 # HideHiddenFiles
 # SetTimeZone
 # Harden-ExecutionPolicy
+
